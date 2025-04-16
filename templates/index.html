@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pomp Controller</title>
+  <style>
+    body { background: #f4f4f4; font-family: Arial,sans-serif; margin:0; padding:0 }
+    .container { max-width:800px; margin:2em auto; padding:0 1em }
+    h1 { text-align:center; margin-bottom:1em }
+
+    .card {
+      background:#fff; border-radius:8px;
+      box-shadow:0 2px 5px rgba(0,0,0,0.1);
+      padding:1em 1.5em; margin-bottom:1em;
+    }
+    .card h2 {
+      margin:0 0 .5em; font-size:1.2em;
+      border-bottom:1px solid #ddd; padding-bottom:.3em;
+    }
+
+    .status-on {
+      display:inline-block; padding:.4em .8em;
+      background:#28a745; color:#fff; border-radius:4px;
+      font-weight:bold;
+    }
+    .status-off {
+      display:inline-block; padding:.4em .8em;
+      background:#6c757d; color:#fff; border-radius:4px;
+      font-weight:bold;
+    }
+
+    form label { display:block; margin-top:.8em; font-weight:bold }
+    form input[type="number"] {
+      width:100%; padding:.5em; margin-top:.3em;
+      border:1px solid #ccc; border-radius:4px;
+      box-sizing:border-box;
+    }
+    button, form button {
+      margin-top:1em; background:#007bff; color:#fff;
+      border:none; padding:.6em 1.2em; border-radius:4px;
+      cursor:pointer; font-size:1em;
+    }
+    button:hover, form button:hover { background:#0056b3 }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Pomp Controller</h1>
+
+    <!-- Instellingen -->
+    <div class="card">
+      <h2>Instellingen</h2>
+      <form action="{{ url_for('index') }}" method="post">
+        <label for="pulse">Puls tijd (s):</label>
+        <input type="number" name="pulse" id="pulse"
+               value="{{ pulse }}" step="1" required>
+
+        <label for="pause">Pauze tijd (s):</label>
+        <input type="number" name="pause" id="pause"
+               value="{{ pause }}" step="1" required>
+
+        <button type="submit">Bijwerken</button>
+      </form>
+    </div>
+
+    <!-- Status + Reset -->
+    <div class="card">
+      <h2>Status</h2>
+      <div id="statusBlock"
+           class="{{ 'status-on' if status=='Aan' else 'status-off' }}">
+        {{ status }}
+      </div>
+      <p id="phaseInfo">
+        Tijd in huidige fase: {{ elapsed }} s →
+        Status: {{ status }} / {{ duration }} s
+      </p>
+      <p>
+        Aantal cycli: <strong id="cycles">{{ cycles }}</strong>
+      </p>
+
+      <!-- AJAX Reset‑knop -->
+      <button id="resetBtn">Reset teller & fase</button>
+    </div>
+  </div>
+
+  <script>
+    async function fetchStatus() {
+      const resp = await fetch('{{ url_for("status") }}');
+      const d    = await resp.json();
+
+      // Status‑block
+      const blk = document.getElementById('statusBlock');
+      blk.textContent = d.status;
+      blk.className = d.status === 'Aan' ? 'status-on' : 'status-off';
+
+      // Phase‑info & cycles
+      document.getElementById('phaseInfo').textContent =
+        `Tijd in huidige fase: ${d.elapsed} s → ` +
+        `Status: ${d.status} / ${d.duration} s`;
+      document.getElementById('cycles').textContent = d.cycles;
+    }
+
+    // Reset via AJAX
+    document.getElementById('resetBtn').addEventListener('click', async () => {
+      await fetch('{{ url_for("reset") }}', { method: 'POST' });
+      fetchStatus();
+    });
+
+    // Poll elke seconde
+    setInterval(fetchStatus, 1000);
+    window.addEventListener('load', fetchStatus);
+  </script>
+</body>
+</html>
