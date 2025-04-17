@@ -21,7 +21,7 @@ except ImportError:
         def cleanup():     print("[DummyGPIO] cleanup()")
     GPIO = DummyGPIO
 
-# — Flask & GPIO init —
+# — Flask en GPIO init —
 app = Flask(__name__)
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
@@ -40,7 +40,7 @@ state_elapsed = 0.0
 pump_status = "Uit"
 current_phase_duration = 0.0
 
-# — Achtergrondthread voor pomp‑besturing —
+# — Achtergrondthread voor pomp‐besturing —
 def pump_control():
     global state_elapsed, pump_status, completed_cycles, current_phase_duration
     while True:
@@ -52,8 +52,8 @@ def pump_control():
         start_time = time.time()
 
         while True:
-            # reset-event check
             if reset_event.is_set():
+                # reset mid-fase
                 with lock:
                     state_elapsed = 0.0
                     current_phase_duration = pulse_time
@@ -94,8 +94,9 @@ def pump_control():
         with lock:
             completed_cycles += 1
 
-# Start het achtergrondthread
+# start de pump_control-thread
 threading.Thread(target=pump_control, daemon=True).start()
+
 
 # — Webroutes —  
 @app.route('/', methods=['GET', 'POST'])
@@ -125,22 +126,23 @@ def index():
 def status():
     with lock:
         return jsonify({
-            'cycles': completed_cycles,
-            'status': pump_status,
-            'elapsed': int(state_elapsed),
+            'pulse':    int(pulse_time),            # setpoint puls
+            'pause':    int(pause_time),            # setpoint pauze
+            'cycles':   completed_cycles,
+            'status':   pump_status,
+            'elapsed':  int(state_elapsed),
             'duration': int(current_phase_duration)
         })
 
 @app.route('/reset', methods=['POST'])
 def reset():
-    global completed_cycles, state_elapsed, current_phase_duration
+    global completed_cycles
     with lock:
         completed_cycles = 0
-        state_elapsed = 0.0
-        # current_phase_duration wordt na de reset-event opnieuw ingesteld in pump_control
     reset_event.set()
     return ('', 204)  # No Content
 
+# — Applicatie starten —  
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Pomp Controller')
     parser.add_argument('--debug', action='store_true',
