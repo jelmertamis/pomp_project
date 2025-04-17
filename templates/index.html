@@ -37,7 +37,7 @@
     }
     .input-with-current input {
       flex: none;
-      width: 6ch;       /* breedte voor ca. 4 cijfers + ruimte voor padding */
+      width: 6ch;                /* breedte voor max vier cijfers */
       padding: 0.3em;
       border: 1px solid #ccc;
       border-radius: 4px;
@@ -49,16 +49,6 @@
       font-size: .9em;
       color: #555;
       white-space: nowrap;
-    }
-
-    /* Verberg spin‑knoppen op number inputs */
-    input[type=number]::-webkit-outer-spin-button,
-    input[type=number]::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    input[type=number] {
-      -moz-appearance: textfield;
     }
 
     button {
@@ -83,8 +73,15 @@
         <div class="form-group">
           <label for="pulse">Puls tijd (s):</label>
           <div class="input-with-current">
-            <input type="number" name="pulse" id="pulse"
-                   value="{{ pulse }}" step="1" required>
+            <input 
+              type="text" 
+              name="pulse" 
+              id="pulse"
+              value="{{ pulse }}" 
+              inputmode="numeric" 
+              pattern="[0-9]*" 
+              maxlength="4"
+              required>
             <span class="current-value" id="currentPulse">
               {{ pulse }} s
             </span>
@@ -94,8 +91,15 @@
         <div class="form-group">
           <label for="pause">Pauze tijd (s):</label>
           <div class="input-with-current">
-            <input type="number" name="pause" id="pause"
-                   value="{{ pause }}" step="1" required>
+            <input 
+              type="text" 
+              name="pause" 
+              id="pause"
+              value="{{ pause }}" 
+              inputmode="numeric" 
+              pattern="[0-9]*" 
+              maxlength="4"
+              required>
             <span class="current-value" id="currentPause">
               {{ pause }} s
             </span>
@@ -129,10 +133,8 @@
       const d    = await resp.json();
 
       // Live update van setpoints
-      document.getElementById('currentPulse').textContent =
-        `${d.pulse} s`;
-      document.getElementById('currentPause').textContent =
-        `${d.pause} s`;
+      document.getElementById('currentPulse').textContent = `${d.pulse} s`;
+      document.getElementById('currentPause').textContent = `${d.pause} s`;
 
       // Statusblok
       const blk = document.getElementById('statusBlock');
