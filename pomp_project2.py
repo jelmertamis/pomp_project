@@ -63,12 +63,24 @@ def save_setting(key: str, value: float):
 lock = threading.Lock()
 reset_event = threading.Event()
 
+# Laad bij start
 pulse_time = load_setting('pulse', DEFAULT_PULSE)
 pause_time = load_setting('pause', DEFAULT_PAUSE)
 completed_cycles = 0
 state_elapsed = 0.0
 pump_status = "Uit"
 current_phase_duration = 0.0
+
+# — Background thread: herlaad settings elke 2s uit de DB —
+def settings_watcher():
+    global pulse_time, pause_time
+    while True:
+        with lock:
+            pulse_time = load_setting('pulse', DEFAULT_PULSE)
+            pause_time = load_setting('pause', DEFAULT_PAUSE)
+        time.sleep(2)
+
+threading.Thread(target=settings_watcher, daemon=True).start()
 
 # — Achtergrondthread voor pomp‑besturing —
 def pump_control():
@@ -123,9 +135,7 @@ def pump_control():
         with lock:
             completed_cycles += 1
 
-# Start de pump_control-thread
 threading.Thread(target=pump_control, daemon=True).start()
-
 
 # — Webroutes —  
 @app.route('/', methods=['GET', 'POST'])
@@ -138,7 +148,6 @@ def index():
             with lock:
                 pulse_time = new_p
                 pause_time = new_z
-            # meteen opslaan in de DB
             save_setting('pulse', pulse_time)
             save_setting('pause', pause_time)
         except (ValueError, KeyError):
